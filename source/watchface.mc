@@ -4,6 +4,7 @@ using Toybox.System;
 using Toybox.Time;
 using Toybox.ActivityMonitor;
 using Toybox.HeartRate;
+using Toybox.Graphics as Gfx; // Убедитесь, что Gfx импортирован
 
 class MyWatchFace extends Ui.WatchFace {
 
@@ -13,61 +14,59 @@ class MyWatchFace extends Ui.WatchFace {
     var lastHeartRate;
 
     function initialize() {
-        WatchUi.WatchFace.initialize();
+        Ui.WatchFace.initialize();
         lastBatteryLevel = System.getDeviceSettings().batteryCharge;
         lastDate = Time.now().format("%Y-%m-%d");
+        lastSteps = 0;  // Инициализация lastSteps
+        lastHeartRate = 0;  // Инициализация lastHeartRate
     }
 
-    function onUpdate(dc as Dc) {
-        // Очищаем экран
-        dc.clear();
+    function onUpdate(dc) {  // Убрано 'as DrawContext'
+        try {
+            dc.clear();
 
-        // Получаем текущее время
-        var time = Time.now();
-        var timeStr = time.format("%H:%M"); // без секунд для снижения нагрузки
+            var time = Time.now();
+            var timeStr = time.format("%H:%M");
 
-        // Отображение данных на экране
-        dc.drawText(20, 30, Gfx.FONT_XLARGE, timeStr);  // время
+            dc.drawText(20, 30, Gfx.FONT_XLARGE, timeStr);
 
-        // Дата обновляется раз в день, когда меняется `lastDate`
-        var currentDate = time.format("%Y-%m-%d");
-        if (currentDate != lastDate) {
-            lastDate = currentDate;
+            var currentDate = time.format("%Y-%m-%d");
+            if (currentDate != lastDate) {
+                lastDate = currentDate;
+            }
+            dc.drawText(20, 60, Gfx.FONT_MEDIUM, "Date: " + lastDate);
+
+            var steps = ActivityMonitor.getActivityInfo().steps;
+            if (steps != lastSteps) {
+                lastSteps = steps;
+            }
+            dc.drawText(20, 90, Gfx.FONT_MEDIUM, "Steps: " + lastSteps);
+
+            var heartRate = HeartRate.getHeartRate();
+            if (heartRate != lastHeartRate) {
+                lastHeartRate = heartRate;
+            }
+            dc.drawText(20, 120, Gfx.FONT_MEDIUM, "HR: " + lastHeartRate);
+
+            var battery = System.getDeviceSettings().batteryCharge;
+            if (battery != lastBatteryLevel) {
+                lastBatteryLevel = battery;
+            }
+            dc.drawText(20, 150, Gfx.FONT_MEDIUM, "Battery: " + lastBatteryLevel + "%");
+        } catch (e) {
+            System.println("Ошибка: " + e);
         }
-        dc.drawText(20, 60, Gfx.FONT_MEDIUM, "Date: " + lastDate);  // дата
-
-        // Обновляем шаги только когда они меняются
-        var steps = ActivityMonitor.getActivityInfo().steps;
-        if (steps != lastSteps) {
-            lastSteps = steps;
-        }
-        dc.drawText(20, 90, Gfx.FONT_MEDIUM, "Steps: " + lastSteps);   // шаги
-
-        // Сердцебиение обновляется только при активности экрана
-        var heartRate = HeartRate.getHeartRate();
-        if (heartRate != lastHeartRate) {
-            lastHeartRate = heartRate;
-        }
-        dc.drawText(20, 120, Gfx.FONT_MEDIUM, "HR: " + lastHeartRate); // сердцебиение
-
-        // Обновляем заряд батареи только если он изменился
-        var battery = System.getDeviceSettings().batteryCharge;
-        if (battery != lastBatteryLevel) {
-            lastBatteryLevel = battery;
-        }
-        dc.drawText(20, 150, Gfx.FONT_MEDIUM, "Battery: " + lastBatteryLevel + "%"); // заряд батареи
     }
 
     function onShow() {
-        requestUpdate(); // Обновляем, когда экран активен
+        requestUpdate(); // Запрос обновления
     }
 
     function onHide() {
-        cancelUpdate(); // Отключаем обновления, когда экран неактивен
+        cancelUpdate(); // Отмена обновления
     }
 
     function onTimerTick() {
-        // Обновляем каждую минуту в фоновом режиме для минимизации расхода
-        requestUpdate(60000); 
+        requestUpdate(); // Запрос обновления при каждом тике таймера
     }
 }
